@@ -1,7 +1,6 @@
 WITH raw_data AS (
     SELECT * 
     FROM {{ source('kaggle', 'Steam') }}
-    -- Sadece geçerli Steam verilerini al, boş 15 satırı filtrele
     WHERE steam_store_available IS TRUE
 ),
 
@@ -12,36 +11,31 @@ cleaned AS (
         release_date,
         EXTRACT(YEAR FROM release_date) AS release_year,
         
-        -- Fiyat ve Temel Sayısal Değişkenler
         CAST(price AS FLOAT64) AS price,
         COALESCE(CAST(achievements AS INT64), 0) AS achievements_count,
         COALESCE(CAST(dlc_count AS INT64), 0) AS dlc_count,
         
-        -- Platform Desteği (Boolean)
         COALESCE(CAST(windows AS BOOL), FALSE) AS supports_windows,
         COALESCE(CAST(mac AS BOOL), FALSE) AS supports_mac,
         COALESCE(CAST(linux AS BOOL), FALSE) AS supports_linux,
 
-        -- Link Varlığı (Metin tutmak yerine Boolean yapıyoruz)
         CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END AS has_website,
         CASE WHEN support_url IS NOT NULL AND support_url != '' THEN 1 ELSE 0 END AS has_support_url,
         CASE WHEN support_email IS NOT NULL AND support_email != '' THEN 1 ELSE 0 END AS has_support_email,
 
-        -- Screenshot ve Movie Sayıları (URL içindeki "https" sayılarını sayarak)
         ARRAY_LENGTH(REGEXP_EXTRACT_ALL(screenshots, r'https://')) AS screenshot_count,
         ARRAY_LENGTH(REGEXP_EXTRACT_ALL(movies, r'https://')) AS movie_count,
 
-        -- Yorum Skorları ve Oranı Calculation
         COALESCE(CAST(positive AS INT64), 0) AS positive_reviews,
         COALESCE(CAST(negative AS INT64), 0) AS negative_reviews,
         (COALESCE(CAST(positive AS INT64), 0) + COALESCE(CAST(negative AS INT64), 0)) AS total_reviews,
         
+        -- YUVARLAMA EKLENDİ (Virgülden sonra 2 basamak)
         CASE 
             WHEN (COALESCE(CAST(positive AS INT64), 0) + COALESCE(CAST(negative AS INT64), 0)) = 0 THEN 0.0
-            ELSE SAFE_DIVIDE(CAST(positive AS FLOAT64), (CAST(positive AS FLOAT64) + CAST(negative AS FLOAT64))) * 100.0
+            ELSE ROUND(SAFE_DIVIDE(CAST(positive AS FLOAT64), (CAST(positive AS FLOAT64) + CAST(negative AS FLOAT64))) * 100.0, 2)
         END AS positive_review_percentage,
 
-        -- Estimated Owners Standartlaştırma ve Sayısal Ortalamaya Çevirme
         CASE 
             WHEN estimated_owners IN ('0 - 0', '0 .. 0') THEN 50
             WHEN estimated_owners IN ('0 - 20000', '0 .. 20,000') THEN 10000
@@ -60,11 +54,11 @@ cleaned AS (
             ELSE 10000
         END AS estimated_owners_avg,
 
-        -- Kategorik String Değişkenler (Marts katmanında işlenecek)
         LOWER(COALESCE(genres, '')) AS genres,
         LOWER(COALESCE(categories, '')) AS categories,
         LOWER(COALESCE(tags, '')) AS tags,
-        LOWER(COALESCE(supported_languages, '')) AS supported_languages
+        LOWER(COALESCE(supported_languages, '')) AS supported_languages,
+        LOWER(COALESCE(full_audio_languages, '')) AS full_audio_languages -- DİL VE SESLENDİRME EKLENDİ
 
     FROM raw_data
 )
