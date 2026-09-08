@@ -15,3 +15,9 @@ env/
 .DS_Store
 .vscode/
 dbt_internal_packages/
+bigquery_key.json
+bigquery_key.json.json
+*.json
+venv/
+*.pkl
+__pycache__/
