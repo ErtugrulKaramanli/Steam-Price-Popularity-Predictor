@@ -2,14 +2,16 @@ WITH raw_data AS (
     SELECT * 
     FROM {{ source('kaggle', 'Steam') }}
     WHERE steam_store_available IS TRUE
-      -- Ücretsiz ve F2P oyunları staging aşamasında eliyoruz
+      -- Ücretsiz ve F2P oyunları eliyoruz
       AND CAST(price AS FLOAT64) > 0
       AND (genres IS NULL OR NOT REGEXP_CONTAINS(LOWER(genres), r'free to play'))
-      -- Null / Eksik kritik değerleri temizleme
+      -- Null / Eksik değerleri temizleme
       AND price IS NOT NULL
       AND release_date IS NOT NULL
       AND estimated_owners IS NOT NULL
       AND TRIM(estimated_owners) != ''
+      -- 0 Oyuncusu olan ölü kayıtları eliyoruz
+      AND TRIM(estimated_owners) NOT IN ('0 - 0', '0 .. 0')
 ),
 
 cleaned AS (
@@ -43,7 +45,6 @@ cleaned AS (
             ELSE ROUND(SAFE_DIVIDE(CAST(positive AS FLOAT64), (CAST(positive AS FLOAT64) + CAST(negative AS FLOAT64))) * 100.0, 2)
         END AS positive_review_percentage,
 
-        -- Orijinal ham range ifadesini koruyoruz
         TRIM(estimated_owners) AS estimated_owners_raw,
 
         LOWER(COALESCE(genres, '')) AS genres,

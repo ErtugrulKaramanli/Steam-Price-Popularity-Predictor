@@ -36,10 +36,24 @@ SELECT
     app_id,
     name,
     
-    -- Targets & Target Features
-    price,                           -- Fiyat Tahmini
+    -- Targets
+    price,                           -- Fiyat Tahmini (Regression Target)
     positive_review_percentage,      -- Review Skor Tahmini (%)
-    estimated_owners_raw,            -- Oyuncu Range'i (Python'da gruplanacak)
+    
+    -- Homojen 5'li Sınıflandırma Target'ı (dbt Transformation)
+    CASE 
+        WHEN estimated_owners_raw IN ('0 - 20000', '0 .. 20,000') THEN '0-20k'
+        WHEN estimated_owners_raw IN ('20000 - 50000', '20,000 .. 50,000') THEN '20k-50k'
+        WHEN estimated_owners_raw IN (
+            '50000 - 100000', '50,000 .. 100,000',
+            '100000 - 200000', '100,000 .. 200,000'
+        ) THEN '50k-200k'
+        WHEN estimated_owners_raw IN (
+            '200000 - 500000', '200,000 .. 500,000',
+            '500000 - 1000000', '500,000 .. 1,000,000'
+        ) THEN '200k-1M'
+        ELSE '1M+'
+    END AS target_owner_class,
 
     -- Basic Numeric Features
     release_year,
