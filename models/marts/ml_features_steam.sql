@@ -1,6 +1,6 @@
 {% set genres_list = [
   'action', 'adventure', 'casual', 'rpg', 'simulation', 'strategy', 
-  'indie', 'early access', 'free to play', 'massively multiplayer', 
+  'indie', 'early access', 'massively multiplayer', 
   'racing', 'sports', 'design & illustration', 'animation & modeling', 
   'game development', 'education', 'utilities'
 ] %}
@@ -21,6 +21,13 @@
   'roguelike', 'roguelite', 'metroidvania', 'souls like', 'deckbuilding', 'bullet hell', 'tower defense', 'city builder', 'survival', 'crafting', 'turn based', 'hack and slash', 'fps', 'walking simulator', 'visual novel', 'sandbox', 'management', 'puzzle platformer'
 ] %}
 
+{% set languages_list = [
+  'english', 'french', 'italian', 'german', 'spanish', 'arabic', 'bulgarian', 
+  'portuguese', 'hungarian', 'greek', 'danish', 'traditional chinese', 
+  'simplified chinese', 'korean', 'dutch', 'norwegian', 'polish', 'romanian', 
+  'russian', 'thai', 'turkish', 'ukrainian', 'finnish', 'czech', 'swedish', 'japanese'
+] %}
+
 WITH stg AS (
     SELECT * FROM {{ ref('stg_steam_games') }}
 )
@@ -29,17 +36,18 @@ SELECT
     app_id,
     name,
     
-    -- Target Variables
-    price,                           -- Fiyat Tahmini (Regression)
+    -- Targets & Target Features
+    price,                           -- Fiyat Tahmini
     positive_review_percentage,      -- Review Skor Tahmini (%)
-    estimated_owners_avg,            -- Oyuncu Sayısı Tahmini
+    estimated_owners_raw,            -- Oyuncu Range'i (Python'da gruplanacak)
 
     -- Basic Numeric Features
     release_year,
     achievements_count,
     dlc_count,
-    COALESCE(screenshot_count, 0) AS screenshot_count,
-    COALESCE(movie_count, 0) AS movie_count,
+    screenshot_count,
+    movie_count,
+    (screenshot_count + movie_count) AS total_media_count,
     has_website,
     has_support_url,
     has_support_email,
@@ -51,17 +59,22 @@ SELECT
 
     -- Dynamic Multi-Hot Encoding for Genres
     {% for genre in genres_list %}
-    IF(REGEXP_CONTAINS(LOWER(genres), r'{{ genre }}'), 1, 0) AS genre_{{ genre | replace(' ', '_') | replace('&', 'and') }},
+    IF(REGEXP_CONTAINS(genres, r'{{ genre }}'), 1, 0) AS genre_{{ genre | replace(' ', '_') | replace('&', 'and') }},
     {% endfor %}
 
     -- Dynamic Multi-Hot Encoding for Categories
     {% for category in categories_list %}
-    IF(REGEXP_CONTAINS(LOWER(categories), r'{{ category }}'), 1, 0) AS cat_{{ category | replace(' ', '_') | replace('-', '_') | replace('/', '_') }},
+    IF(REGEXP_CONTAINS(categories, r'{{ category }}'), 1, 0) AS cat_{{ category | replace(' ', '_') | replace('-', '_') | replace('/', '_') }},
     {% endfor %}
 
     -- Dynamic Multi-Hot Encoding for Key Tags
     {% for tag in tags_list %}
-    IF(REGEXP_CONTAINS(LOWER(tags), r'{{ tag }}'), 1, 0) AS tag_{{ tag | replace(' ', '_') | replace('-', '_') }}{% if not loop.last %},{% endif %}
+    IF(REGEXP_CONTAINS(tags, r'{{ tag }}'), 1, 0) AS tag_{{ tag | replace(' ', '_') | replace('-', '_') }},
+    {% endfor %}
+
+    -- Dynamic Multi-Hot Encoding for Supported Languages
+    {% for lang in languages_list %}
+    IF(REGEXP_CONTAINS(supported_languages, r'{{ lang }}'), 1, 0) AS lang_{{ lang | replace(' ', '_') }}{% if not loop.last %},{% endif %}
     {% endfor %}
 
 FROM stg
