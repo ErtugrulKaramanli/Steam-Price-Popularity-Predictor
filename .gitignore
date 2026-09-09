@@ -1,5 +1,23 @@
-# you shouldn't commit these into source control
-# these are the default directory names, adjust/add to fit your needs
-target/
-dbt_packages/
-logs/
+# dbt geçici dosyaları ve loglar
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Python & ML Çıktıları
+*.pkl
+*.joblib
+__pycache__/
+.venv/
+env/
+.env
+
+# OS ve Editör dosyaları
+.DS_Store
+.vscode/
+dbt_internal_packages/
+bigquery_key.json
+bigquery_key.json.json
+*.json
+venv/
+*.pkl
+__pycache__/
