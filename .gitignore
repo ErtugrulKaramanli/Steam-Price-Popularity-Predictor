@@ -21,3 +21,7 @@ bigquery_key.json.json
 venv/
 *.pkl
 __pycache__/
+
+!ml_models/saved_models/bundle_price.pkl
+!ml_models/saved_models/bundle_owners.pkl
+!ml_models/saved_models/bundle_review.pkl
