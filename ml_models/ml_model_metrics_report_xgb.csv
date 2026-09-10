@@ -1,0 +1,4 @@
+model,R2,MAE,RMSE,MAPE_pct,Accuracy,Macro_F1,Weighted_F1,Precision_Macro,Recall_Macro,Error_Margin_MAE,Error_Margin_95_Conf
+Price Model (Regressor),0.4128,3.981,7.0162,71.76,,,,,,3.981,13.4646
+Owners Model (Classifier),,,,,0.6821,0.4443,0.7269,0.4302,0.4892,,
+Review Model (Regressor),0.7023,14.7114,21.9816,inf,,,,,,14.7114,43.0833

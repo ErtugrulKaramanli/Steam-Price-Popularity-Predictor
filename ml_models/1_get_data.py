@@ -1,68 +1,99 @@
 import os
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from google.cloud import bigquery
-from google.oauth2 import service_account
 
-base_dir = Path(__file__).resolve().parent.parent
-data_dir = base_dir / "data"
-data_dir.mkdir(parents=True, exist_ok=True)
-
-# BigQuery Bağlantı Bilgileri
-PROJECT_ID = "datascientiststeamproject"
-DATASET_ID = "dbt_dataset_steam"
-TABLE_ID = "ml_features_steam"
-KEY_PATH = base_dir / "bigquery_key.json"
-
-def map_owners_group(val):
-    if pd.isna(val):
-        return np.nan
-    val = float(val)
-    if val <= 10000:
-        return "0-10k"
-    elif val <= 75000:
-        return "10k-75k"
-    elif val <= 350000:
-        return "75k-350k"
-    elif val <= 1500000:
-        return "350k-1.5M"
-    else:
-        return "1.5M+"
-
-def fetch_and_prepare_data():
-    print("🚀 BigQuery'ye bağlanılıyor...")
-    if not KEY_PATH.exists():
-        raise FileNotFoundError(f"❌ Key dosyası bulunamadı: {KEY_PATH}")
-
-    credentials = service_account.Credentials.from_service_account_file(KEY_PATH)
-    client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
-
-    query = f"""
-        SELECT *
-        FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
+# ---------------------------------------------------------
+# 1. BigQuery Veri Çekme Aşaması
+# ---------------------------------------------------------
+def fetch_data_from_bigquery():
+    print("BigQuery'den güncel mart verisi çekiliyor...")
+    
+    # GCP BigQuery Client başlatma (Ortam değişkenleriniz yapılandırılmış varsayıldı)
+    client = bigquery.Client()
+    
+    # dbt mart modelinizin bulunduğu dataset ve tablo adı
+    query = """
+        SELECT * 
+        FROM `your_project.your_dataset.ml_features_steam`
     """
     
-    print("📥 Veri BigQuery'den çekiliyor...")
     df = client.query(query).to_dataframe()
-    print(f"🔹 Çekilen Toplam Oyun Sayısı: {len(df):,}")
+    print(f"Toplam Çekilen Ham Satır Sayısı: {len(df)}")
+    return df
 
-    # 1. F2P ve Ücretsiz Oyunları Temizleme
-    df = df[df['price'] > 0].copy()
-    if 'genre_free_to_play' in df.columns:
-        df = df[df['genre_free_to_play'] == 0].copy()
-    print(f"✂️ Ücretsiz (F2P) oyunlar elendi. Kalan: {len(df):,}")
 
-    # 2. Owners Sınıflarını 5 Segmente Dönüştürme
-    df['owners_grouped'] = df['estimated_owners_avg'].apply(map_owners_group)
+# ---------------------------------------------------------
+# 2. Oyuncu Sayısı Sınıflandırma (Homojen Segmentasyon)
+# ---------------------------------------------------------
+def map_owners_to_classes(raw_range):
+    """
+    dbt'den gelen 'estimated_owners_raw' (örn: '0 - 20000', '20000 - 50000') 
+    metinsel ifadelerini homojen makine öğrenmesi sınıflarına dönüştürür.
+    """
+    if pd.isna(raw_range):
+        return np.nan
+    
+    val = str(raw_range).strip().lower()
+    
+    # Kaggle Steam Dataset standart range eşlemeleri
+    if val in ['0 - 20000', '0 .. 20,000', '0 - 0', '0 .. 0']:
+        return '0-20k'
+    elif val in ['20000 - 50000', '20,000 .. 50,000']:
+        return '20k-50k'
+    elif val in ['50000 - 100000', '50,000 .. 100,000']:
+        return '50k-100k'
+    elif val in ['100000 - 200000', '100,000 .. 200,000']:
+        return '100k-200k'
+    elif val in ['200000 - 500000', '200,000 .. 500,000']:
+        return '200k-500k'
+    elif val in ['500000 - 1000000', '500,000 .. 1,000,000']:
+        return '500k-1M'
+    else:
+        # 1M+ üstü daha nadir büyük projeleri kapsar
+        return '1M+'
 
-    # 3. Eksik Veri Temizliği
-    df = df.dropna(subset=['price', 'owners_grouped', 'positive_review_percentage']).copy()
 
-    # 4. Parquet Olarak Kaydetme
-    output_path = data_dir / "processed_steam_data.parquet"
-    df.to_parquet(output_path, index=False)
-    print(f"💾 İşlenmiş veri başarıyla kaydedildi: {output_path.relative_to(base_dir)}")
+# ---------------------------------------------------------
+# 3. Ana İşleme Fonksiyonu
+# ---------------------------------------------------------
+def process_data(df):
+    print("Veri ön işleme ve hedef değişken (target) dönüşümleri yapılıyor...")
+    
+    # Null değer güvenliği (Kritik kolonlarda)
+    df = df.dropna(subset=['price', 'estimated_owners_raw']).copy()
+    
+    # 1. Sınıflandırma Target'ını Oluşturma
+    df['target_owner_class'] = df['estimated_owners_raw'].apply(map_owners_to_classes)
+    
+    # 2. Ham/Gereksiz Identifier veya Text Kolonlarını Ayıklama
+    # app_id ve name EDA / raporlama için saklanabilir, eğitim öncesi düşürülür
+    drop_cols = ['estimated_owners_raw']
+    df = df.drop(columns=[col for col in drop_cols if col in df.columns])
+    
+    # Sınıf Dağılımını Ekrana Basalım (Class Imbalance Kontrolü)
+    print("\nYeni Sınıf Dağılımı (target_owner_class):")
+    print(df['target_owner_class'].value_counts(dropna=False))
+    
+    return df
 
+
+# ---------------------------------------------------------
+# 4. Pipeline Çalıştırma & Kaydetme
+# ---------------------------------------------------------
 if __name__ == "__main__":
-    fetch_and_prepare_data()
+    # 1. Veriyi Çek
+    raw_df = fetch_data_from_bigquery()
+    
+    # 2. İşle
+    processed_df = process_data(raw_df)
+    
+    # 3. Veriyi Yerel Dizine Kaydet
+    output_dir = "data"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "steam_ml_ready.parquet")
+    
+    # Parquet formatı veri tiplerini koruduğu için CSV'ye göre tercih edilir
+    processed_df.to_parquet(output_path, index=False)
+    print(f"\nİşlenmiş veri başarıyla kaydedildi: {output_path}")
+    print(f"Final Veri Boyutu: {processed_df.shape}")
