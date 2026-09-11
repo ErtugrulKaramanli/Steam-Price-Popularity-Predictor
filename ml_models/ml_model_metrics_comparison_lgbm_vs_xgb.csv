@@ -1,0 +1,10 @@
+model,metric,LightGBM,XGBoost,diff (XGB - LGBM)
+Owners Model (Classifier),Accuracy,0.6827,0.6821,-0.0006
+Owners Model (Classifier),Macro_F1,0.445,0.4443,-0.0007
+Owners Model (Classifier),Weighted_F1,0.7275,0.7269,-0.0006
+Price Model (Regressor),R2,0.4021,0.4128,0.0107
+Price Model (Regressor),MAE,4.011,3.981,-0.03
+Price Model (Regressor),RMSE,7.0799,7.0162,-0.0637
+Review Model (Regressor),R2,0.7011,0.7023,0.0012
+Review Model (Regressor),MAE,14.9276,14.7114,-0.2162
+Review Model (Regressor),RMSE,22.0266,21.9816,-0.045
