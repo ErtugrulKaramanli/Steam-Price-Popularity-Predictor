@@ -1,7 +1,7 @@
 # 🎮 STEAMCAST: Steam Oyun Veri Analitiği, Fiyatlandırma ve Pazar Simülatörü
 
 <p align="center">
-  <img src="docs/9.jpg" alt="SteamCast Canlı Demo" width="100%">
+  <img src="docs/9.png" alt="SteamCast Canlı Demo" width="100%">
 </p>
 
 <p align="center">
@@ -35,8 +35,8 @@ Valve Corporation tarafından geliştirilen Steam, PC oyun pazarının %80'ini d
 * **İnceleme Skoru Endişesi:** Görünürlük için kritik olan %70+ pozitif skor barajını yakalamak doğru tür stratejisi gerektirir.
 
 <p align="center">
-  <img src="docs/1.jpg" alt="Steam Ekosistemi" width="48%">
-  <img src="docs/2.jpg" alt="Problem Tanımı" width="48%">
+  <img src="docs/1.png" alt="Steam Ekosistemi" width="48%">
+  <img src="docs/2.png" alt="Problem Tanımı" width="48%">
 </p>
 
 ---
@@ -53,7 +53,7 @@ Projede modern veri mühendisliği ve makine öğrenmesi araçları entegre bir 
 | **Açıklanabilirlik & Arayüz** | Streamlit, SHAP | Geliştiricilerin anlık simülasyon yapabileceği, SHAP grafikleriyle desteklenen interaktif web arayüzü. |
 
 <p align="center">
-  <img src="docs/3.jpg" alt="Çözüm Mimarisi" width="100%">
+  <img src="docs/3.png" alt="Çözüm Mimarisi" width="100%">
 </p>
 
 ---
